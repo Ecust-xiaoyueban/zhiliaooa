@@ -1,19 +1,37 @@
-from flask import Blueprint,render_template,jsonify
+from flask import Blueprint,render_template,jsonify,redirect,url_for
 from exts import mail,db
 from flask_mail import Message
 from flask import request
 import string
 import random
 from models import EmailCaptchaModel
+from werkzeug.security import generate_password_hash
 bp = Blueprint("auth",__name__,url_prefix="/auth")
+from .forms import RegisterForm
+from models import UserModel
 
 @bp.route("/login")
 def login():
     return "login"
-@bp.route("/register")
+@bp.route("/register",methods=['GET','POST'])
 def register():
-    return "register"
-    # return render_template("regist.html")
+    if request.method == 'GET':
+        return "register"
+        # return render_template("regist.html")
+    elif request.method == 'POST':
+        form = RegisterForm(request.form)
+        if form.validate():
+            email = form.email.data
+            username = form.username.data
+            password = form.password.data
+            user = UserModel(email=email,username=username,password=generate_password_hash(password))
+            db.session.add(user)
+            db.session.commit()
+            return redirect(url_for("auth.login"))
+        else:
+            print(form.errors)
+            return redirect(url_for("auth.register"))
+
 
 @bp.route("/captcha/email")
 def get_email_captcha():
